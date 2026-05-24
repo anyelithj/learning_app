@@ -3,6 +3,7 @@ import { Role } from "@/lib/constants";
 // [Slice Auth]: estado cliente del usuario actual (no tokens — viven en cookies httpOnly) | [Patrón]: State + Redux Slice | [Principio]: SRP | [Paradigma]: FP + Inmutabilidad
 
 // [Forma usuario]: subset seguro expuesto al cliente | [Principio]: ISP
+
 export interface AuthUserState {
   id: string;
   email: string;
