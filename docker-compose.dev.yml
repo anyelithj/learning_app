@@ -1,0 +1,71 @@
+# Stack Docker para desarrollo — ProyDemo
+# Solo servicios de infra. Apps (NestJS/Next.js/FastAPI) corren native con pnpm dev / uvicorn.
+# Levantar:  docker compose -f docker-compose.dev.yml up -d
+# Detener:   docker compose -f docker-compose.dev.yml down
+# Logs:      docker compose -f docker-compose.dev.yml logs -f
+
+name: proydemo
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: proydemo_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${DATABASE_NAME:-proydemo}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-proydemo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: proydemo_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: proydemo_pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@proydemo.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmindata:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: proydemo_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP (backend apunta aquí)
+      - "8025:8025"   # UI web
+
+volumes:
+  pgdata:
+  redisdata:
+  pgadmindata:
