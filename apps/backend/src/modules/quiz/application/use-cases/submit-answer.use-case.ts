@@ -9,9 +9,11 @@ import { QUIZ_REPOSITORY } from '../../domain/interfaces/quiz.repository.interfa
 import type { IQuizRepository } from '../../domain/interfaces/quiz.repository.interface';
 import { SessionStatus } from '../../domain/entities/quiz-session.entity';
 import { DIFFICULTY_MULTIPLIER } from '../../domain/value-objects/difficulty.vo';
+import { INSTRUCTION_LANGUAGE } from '../../domain/value-objects/language.vo';
 import { SubmitAnswerDto } from '../dtos/submit-answer.dto';
 import { QuestionType } from '../../domain/entities/question.entity';
 import { AIClientService } from '../../../ai/ai-client.service';
+import { SaveFeedbackUseCase } from '../../../feedback/application/use-cases/save-feedback.use-case';
 // [Use Case SubmitAnswer]: scoring + IA grade + feedback | [Patron]: Command + Facade | [Principio]: SRP + DIP | [Paradigma]: POO
 
 const BASE_SCORE = 100;
@@ -34,6 +36,8 @@ export class SubmitAnswerUseCase {
     @Inject(QUIZ_REPOSITORY) private readonly repo: IQuizRepository,
     // [Inyección AI Service]: AIModule es @Global, AIClientService disponible | [Patrón]: DI | [Principio]: DIP
     private readonly ai: AIClientService,
+    // [SaveFeedbackUseCase]: persiste feedback IA generado para revisión docente y analytics | [Patrón]: Command | [Principio]: SRP
+    private readonly saveFeedback: SaveFeedbackUseCase,
   ) {}
 
   // [execute]: ahora acepta accessToken para propagar JWT a FastAPI | [Principio]: SRP
@@ -75,7 +79,7 @@ export class SubmitAnswerUseCase {
           questionText: question.text,
           correctAnswer: question.correctAnswer,
           userAnswer: dto.userAnswer,
-          language: (quiz.language ?? question.language ?? 'es') as 'es' | 'en',
+          language: quiz.language ?? question.language,
         },
         accessToken,
       );
@@ -102,21 +106,47 @@ export class SubmitAnswerUseCase {
       answeredAt: new Date().toISOString(),
     });
 
-    // [Feedback pedagógico]: solo si respuesta incorrecta. Bloquea hasta 30s; si falla, null | [Patrón]: Fail-soft
+    // [Feedback pedagógico]: solo si respuesta incorrecta | [Patrón]: Fallback Chain | [Principio]: SSOT
+    // [Prioridad]: feedback almacenado en la pregunta (definido por autor/IA al crear el examen) → si no existe, se genera vía IA en caliente | [Patrón]: Prefer-Stored
     let feedback: string | null = null;
     if (!isCorrect) {
-      const fb = await this.ai.generateFeedback(
-        {
+      const storedFeedback = question.feedback?.trim();
+      if (storedFeedback) {
+        feedback = storedFeedback;
+      } else {
+        const fb = await this.ai.generateFeedback(
+          {
+            questionId: question.id,
+            questionText: question.text,
+            correctAnswer: question.correctAnswer,
+            userAnswer: dto.userAnswer,
+            topic: quiz.category,
+            // [Feedback en idioma de instrucción]: el estudiante lee la explicación en español aunque practique otro idioma | [Principio]: SSOT
+            language: INSTRUCTION_LANGUAGE,
+          },
+          accessToken,
+        );
+        feedback = fb?.message ?? null;
+      }
+
+      // [Persist feedback IA]: solo si hay contenido de feedback | [Patrón]: Command | [Principio]: SRP
+      if (feedback) {
+        await this.saveFeedback.execute({
+          sessionId,
           questionId: question.id,
-          questionText: question.text,
-          correctAnswer: question.correctAnswer,
-          userAnswer: dto.userAnswer,
-          topic: quiz.category,
-          language: (quiz.language ?? question.language ?? 'es') as 'es' | 'en',
-        },
-        accessToken,
-      );
-      feedback = fb?.message ?? null;
+          userId,
+          content: feedback,
+          suggestion: null,
+          score,
+          isCorrect,
+          confidence: null,
+          model: 'ai-service',
+          strategyUsed,
+          latencyMs: null,
+        }).catch((err: Error) => {
+          this.logger.warn(`Failed to persist feedback: ${err.message}`);
+        });
+      }
     }
 
     return { session: updated, isCorrect, score, feedback, strategy: strategyUsed };

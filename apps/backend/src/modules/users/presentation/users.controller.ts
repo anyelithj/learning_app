@@ -53,6 +53,13 @@ export class AdminCreateUserDto {
   @ApiProperty({ enum: Role })
   @IsEnum(Role)
   role!: Role;
+
+  // [Sección]: agrupación escolar opcional | [Patrón]: Optional Field
+  @ApiProperty({ required: false, example: '11-1' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  section?: string;
 }
 
 // [DTO Update User]: editable por ADMIN | [Patrón]: DTO Partial
@@ -73,6 +80,12 @@ export class AdminUpdateUserDto {
   @IsOptional()
   @IsEnum(Role)
   role?: Role;
+
+  @ApiProperty({ required: false, example: '11-1' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  section?: string;
 }
 // [Controller Users]: lectura para ADMIN | [Patron]: Controller (MVC) | [Principio]: SRP
 
@@ -93,12 +106,14 @@ export class UsersController {
     @Query('limit') limit?: string,
     @Query('role') role?: Role,
     @Query('search') search?: string,
+    @Query('section') section?: string,
   ) {
     const result = await this.repo.listAll({
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 20,
       role,
       search,
+      section: section || undefined,
     });
     // [Sanea sensibles]: no devolver passwordHash al cliente | [Principio]: Least Privilege
     return {
@@ -109,8 +124,63 @@ export class UsersController {
         firstName: u.firstName,
         lastName: u.lastName,
         role: u.role,
+        section: u.section,
         isActive: u.isActive,
         isEmailVerified: u.isEmailVerified,
+        createdAt: u.createdAt,
+      })),
+    };
+  }
+
+  // [GET /users/students/:id]: detalle de un estudiante específico (TEACHER+) — solo si el target es role=USER | [Principio]: Least Privilege
+  @Get('students/:id')
+  @Roles(Role.TEACHER)
+  @ApiOperation({ summary: 'Get student by id (TEACHER+) — solo role=USER' })
+  async getStudent(@Param('id', ParseUUIDPipe) id: string) {
+    const user = await this.repo.findById(id);
+    if (!user || user.role !== Role.USER) {
+      throw new NotFoundException(`Estudiante ${id} no encontrado`);
+    }
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      section: user.section,
+      isActive: user.isActive,
+      isEmailVerified: user.isEmailVerified,
+      createdAt: user.createdAt,
+    };
+  }
+
+  // [GET /users/students]: alumnos visibles para docentes (seguimiento académico) — TEACHER+ ve solo USER role, sin password ni email opcional | [Patrón]: Filtered Query | [Principio]: Least Privilege
+  @Get('students')
+  @Roles(Role.TEACHER)
+  @ApiOperation({ summary: 'List students (TEACHER+) — solo role=USER' })
+  async listStudents(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('section') section?: string,
+  ) {
+    const result = await this.repo.listAll({
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 50,
+      role: Role.USER,
+      search,
+      section: section || undefined,
+    });
+    return {
+      ...result,
+      data: result.data.map((u) => ({
+        id: u.id,
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        role: u.role,
+        section: u.section,
+        isActive: u.isActive,
         createdAt: u.createdAt,
       })),
     };
@@ -126,6 +196,15 @@ export class UsersController {
     return { total, byRole };
   }
 
+  // [GET /users/sections]: secciones distintas para poblar filtros (TEACHER+) | [Patrón]: Lookup
+  @Get('sections')
+  @Roles(Role.TEACHER)
+  @ApiOperation({ summary: 'Distinct sections for filters (TEACHER+)' })
+  async sections() {
+    const sections = await this.repo.listSections();
+    return { sections };
+  }
+
   // [GET /users/:id]: detalle de usuario | [Principio]: SRP
   @Get(':id')
   @Roles(Role.ADMIN)
@@ -139,6 +218,7 @@ export class UsersController {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      section: user.section,
       isActive: user.isActive,
       isEmailVerified: user.isEmailVerified,
       createdAt: user.createdAt,
@@ -161,6 +241,7 @@ export class UsersController {
       firstName: dto.firstName.trim(),
       lastName: dto.lastName.trim(),
       role: dto.role,
+      section: dto.section?.trim() || null,
     });
     return {
       id: user.id,
@@ -168,6 +249,7 @@ export class UsersController {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      section: user.section,
       isActive: user.isActive,
       isEmailVerified: user.isEmailVerified,
       createdAt: user.createdAt,
@@ -192,6 +274,7 @@ export class UsersController {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      section: user.section,
       isActive: user.isActive,
       isEmailVerified: user.isEmailVerified,
       createdAt: user.createdAt,

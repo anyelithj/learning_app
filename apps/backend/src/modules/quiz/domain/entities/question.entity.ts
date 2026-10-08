@@ -60,4 +60,12 @@ export class Question {
   // [Tiempo límite override]: si null, usa Quiz.timePerQuestionSeconds
   @Column({ type: 'int', nullable: true, name: 'time_limit_seconds' })
   timeLimitSeconds?: number;
+
+  // [Explicación]: razón académica por la cual la respuesta es correcta | [Principio]: SRP
+  @Column({ type: 'text', nullable: true })
+  explanation?: string;
+
+  // [Feedback]: orientación pedagógica sobre el tema | [Principio]: SRP
+  @Column({ type: 'text', nullable: true })
+  feedback?: string;
 }

@@ -194,7 +194,7 @@ export function ReportsClient({ userStats, leaderboard, quizzes }: ReportsClient
                 {leaderboard.slice(0, 10).map((e) => (
                   <tr key={e.userId} className="border-b last:border-0 hover:bg-muted/40">
                     <td className="py-2 px-3 font-semibold">{e.rank}</td>
-                    <td className="py-2 px-3 font-mono text-xs">{e.userId.slice(0, 8)}…</td>
+                    <td className="py-2 px-3 text-xs font-medium">{e.displayName || `Usuario ${e.userId.slice(0, 6)}`}</td>
                     <td className="py-2 px-3">{e.quizzesCompleted}</td>
                     <td className="py-2 px-3 font-semibold">{Math.round(e.avgAccuracy * 100)}%</td>
                     <td className="py-2 px-3">{e.totalPoints.toLocaleString("es-ES")}</td>

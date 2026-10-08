@@ -1,6 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
+import type { Language } from '../quiz/domain/value-objects/language.vo';
 // [AIClientService]: cliente HTTP a FastAPI ai-service | [Patron]: Adapter + Facade | [Principio]: DIP | [Paradigma]: POO
 
 export interface GradeAnswerInput {
@@ -9,7 +10,8 @@ export interface GradeAnswerInput {
   questionText: string;
   correctAnswer: string;
   userAnswer: string;
-  language?: 'es' | 'en';
+  // [ISO 639-1]: idioma del contenido evaluado (grade) o de instrucción (feedback)
+  language?: Language;
   similarityThreshold?: number;
 }
 
@@ -30,7 +32,8 @@ export interface GenerateFeedbackInput {
   correctAnswer: string;
   userAnswer: string;
   topic?: string;
-  language?: 'es' | 'en';
+  // [ISO 639-1]: idioma del contenido evaluado (grade) o de instrucción (feedback)
+  language?: Language;
 }
 
 export interface FeedbackResult {

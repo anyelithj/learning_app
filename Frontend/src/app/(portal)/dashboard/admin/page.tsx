@@ -6,11 +6,14 @@ import { StatCard } from "@/components/portal/StatCard";
 import { Panel, PanelHead } from "@/components/portal/Panel";
 import { Tag } from "@/components/portal/Tag";
 import { getLeaderboard, getUserStats, listQuizzes, listUsers, type AdminUser } from "@/lib/quiz-api";
+import { AnalyticsFilters } from "@/components/portal/AnalyticsFilters";
+import { parsePeriod } from "@/lib/period";
+import { BRAND } from "@/config/brand";
 // [Dashboard Admin]: KPIs reales + tabla usuarios recientes | [Patrón]: Container (RSC) | [Principio]: SRP | [Paradigma]: RSC
 
 export const metadata: Metadata = {
   title: "Dashboard Administrador",
-  description: "Supervisión general de la plataforma NeuroEdu IA.",
+  description: `Supervisión general de la plataforma ${BRAND.name}.`,
   robots: { index: false, follow: false },
 };
 
@@ -22,18 +25,23 @@ const ROLE_LABEL: Record<string, string> = {
   ADMIN: "Administrador",
 };
 
-const ROLE_TONE: Record<string, "default" | "amber" | "green"> = {
+const ROLE_TONE: Record<string, "default" | "amber" | "success"> = {
   USER: "default",
   TEACHER: "amber",
-  ADMIN: "green",
+  ADMIN: "success",
 };
 
-export default async function AdminDashboardPage() {
-  // [Server-fetch paralelo de 4 fuentes]: usuarios, quizzes, leaderboard, top usuarios recientes | [Patrón]: Aggregator
+export default async function AdminDashboardPage(props: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await props.searchParams;
+  const months = parsePeriod(sp.period);
+
+  // [Server-fetch paralelo]: usuarios, quizzes, leaderboard (filtrado por periodo), top usuarios recientes | [Patrón]: Aggregator
   const [statsRes, quizzesRes, leaderboardRes, usersRes] = await Promise.allSettled([
     getUserStats(),
     listQuizzes({ limit: 100 }),
-    getLeaderboard(20),
+    getLeaderboard(20, { months }),
     listUsers({ page: 1, limit: 5 }),
   ]);
 
@@ -51,8 +59,14 @@ export default async function AdminDashboardPage() {
     <>
       <Topbar
         title="Panel administrador"
-        subtitle="Supervisión general de la plataforma NeuroEdu IA."
+        subtitle={`Supervisión general de la plataforma ${BRAND.name}.`}
       />
+
+      {/* [Filtro de periodo]: afecta leaderboard y sesiones jugadas | [Patrón]: Controlled URL State */}
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-muted-foreground">Periodo:</span>
+        <AnalyticsFilters />
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
         <StatCard
@@ -83,7 +97,7 @@ export default async function AdminDashboardPage() {
           actions={
             <Link
               href="/admin/users"
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-border bg-card hover:border-primary hover:text-primary transition-colors"
+              className="btn btn-outline btn-sm"
             >
               Ver todos
             </Link>
@@ -132,14 +146,14 @@ export default async function AdminDashboardPage() {
                       })}
                     </td>
                     <td className="px-2.5 py-3 text-sm">
-                      <Tag tone={u.isActive ? "green" : "default"}>
+                      <Tag tone={u.isActive ? "success" : "default"}>
                         {u.isActive ? "Activo" : "Inactivo"}
                       </Tag>
                     </td>
                     <td className="px-2.5 py-3 text-sm">
                       <Link
                         href="/admin/users"
-                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-border bg-card hover:border-primary hover:text-primary transition-colors inline-block"
+                        className="btn btn-outline btn-sm"
                       >
                         Gestionar
                       </Link>

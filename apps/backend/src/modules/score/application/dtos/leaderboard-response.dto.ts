@@ -4,6 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class LeaderboardEntryDto {
   @ApiProperty() rank!: number;
   @ApiProperty() userId!: string;
+  @ApiProperty() displayName!: string;
   @ApiProperty() totalPoints!: number;
   @ApiProperty() quizzesCompleted!: number;
   @ApiProperty() avgAccuracy!: number;

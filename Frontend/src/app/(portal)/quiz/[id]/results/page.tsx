@@ -100,13 +100,13 @@ export default function QuizResultsPage() {
       <div className="flex flex-wrap gap-3 justify-center">
         <Link
           href={`/quiz/${quiz.id}`}
-          className="px-5 py-2.5 rounded-xl border border-border bg-card font-semibold hover:bg-muted"
+          className="btn btn-outline"
         >
           Repetir quiz
         </Link>
         <Link
           href="/quiz"
-          className="px-5 py-2.5 rounded-xl bg-gradient-brand text-white font-semibold"
+          className="btn btn-primary"
         >
           Otros quizzes
         </Link>

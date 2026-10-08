@@ -3,10 +3,10 @@ import Link from "next/link";
 import { listQuizzes } from "@/lib/quiz-api";
 import type { PaginatedQuizzes } from "@/types/quiz";
 import { QuizAdminTable } from "@/components/quiz/QuizAdminTable";
-import { QuizSeedButton } from "@/components/quiz/QuizSeedButton";
+import { ManagementHeader } from "@/components/portal/ManagementHeader";
 
 export const metadata: Metadata = {
-  title: "Gestión · NeuroEdu IA",
+  title: "Gestión",
   description: "Panel de gestión de exámenes (Docente).",
   robots: { index: false, follow: false },
 };
@@ -33,10 +33,12 @@ export default async function TeacherQuizzesPage(props: { searchParams: Promise<
   let data: PaginatedQuizzes;
   let error: string | null = null;
   try {
+    // [publishedOnly=false]: panel docente debe listar borradores también para activarlos | [Patrón]: Author View
     data = await listQuizzes({
       page: sp.page ? parseInt(sp.page, 10) : 1,
       category: sp.category,
       difficulty: sp.difficulty,
+      publishedOnly: false,
     });
   } catch (err) {
     error = err instanceof Error ? err.message : "Error cargando exámenes";
@@ -44,13 +46,10 @@ export default async function TeacherQuizzesPage(props: { searchParams: Promise<
   }
 
   return (
-    <main className="container mx-auto max-w-6xl px-4 py-8 space-y-6">
-      <header>
-        <h1 className="text-3xl font-extrabold tracking-tight">Gestión</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Administra los exámenes que publicas.
-        </p>
-      </header>
+    // [Semántica]: <div> (el layout del portal ya aporta el <main>)
+    <div className="container mx-auto max-w-6xl py-4 space-y-6">
+      {/* [Cabecera + pestañas de Gestión]: Exámenes · Contenido — el contenido curricular ya no es una sección aparte */}
+      <ManagementHeader role="docente" active="exams" />
 
       <section className="space-y-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
@@ -60,11 +59,10 @@ export default async function TeacherQuizzesPage(props: { searchParams: Promise<
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/quiz/create"
-              className="inline-flex items-center h-10 px-4 rounded-lg bg-gradient-brand text-white font-semibold text-sm hover:opacity-90"
+              className="btn btn-primary"
             >
               + Crear examen
             </Link>
-            <QuizSeedButton label="🌐 Generar examen" />
           </div>
         </div>
 
@@ -87,8 +85,8 @@ export default async function TeacherQuizzesPage(props: { searchParams: Promise<
                 href={`/teacher/quizzes?${buildQuery(sp, { page: String(p) })}`}
                 className={
                   p === data.page
-                    ? "px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
-                    : "px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted"
+                    ? "btn btn-primary btn-sm min-w-9"
+                    : "btn btn-outline btn-sm min-w-9"
                 }
               >
                 {p}
@@ -97,6 +95,6 @@ export default async function TeacherQuizzesPage(props: { searchParams: Promise<
           </nav>
         )}
       </section>
-    </main>
+    </div>
   );
 }

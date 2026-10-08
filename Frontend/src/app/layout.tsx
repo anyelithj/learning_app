@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { StoreProvider } from "@/store/provider";
+import { BRAND } from "@/config/brand";
+import { THEME_INIT_SCRIPT } from "@/config/themes"; // [SSOT temas]: script que aplica el tema guardado antes de pintar
 // [Root Layout]: layout HTML raíz Next.js | [Patrón]: Composite | [Principio]: SRP | [Paradigma]: Funcional + JSX
 
 // [Inter font]: carga via next/font para zero layout shift | [Patrón]: Adapter (Google Fonts)
@@ -15,31 +17,36 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:7000"),
   title: {
-    default: "NeuroEdu IA — Plataforma de Evaluación Cognitiva Inteligente",
-    template: "%s | NeuroEdu IA",
+    default: `${BRAND.name} — Aprende idiomas por niveles MCER (A1–C2)`,
+    template: `%s | ${BRAND.name}`,
   },
   description:
-    "Evaluaciones inteligentes con IA, feedback pedagógico personalizado y seguimiento del progreso académico.",
+    "Aprende inglés, francés, alemán, español, portugués, chino mandarín y ruso con práctica por nivel MCER, correcciones explicadas y exámenes de práctica.",
   keywords: [
-    "evaluación cognitiva",
-    "trivia educativa",
-    "IA educativa",
-    "feedback pedagógico",
-    "aprendizaje adaptativo",
+    "aprender idiomas",
+    "MCER",
+    "CEFR",
+    "inglés",
+    "francés",
+    "alemán",
+    "portugués",
+    "chino mandarín",
+    "ruso",
+    "exámenes de práctica",
   ],
-  authors: [{ name: "NeuroEdu IA" }],
+  authors: [{ name: BRAND.name }],
   openGraph: {
     type: "website",
     locale: "es_CO",
-    siteName: "NeuroEdu IA",
-    title: "NeuroEdu IA — Evaluación Cognitiva con IA",
+    siteName: BRAND.name,
+    title: `${BRAND.name} — Aprende idiomas por niveles MCER`,
     description:
-      "Plataforma educativa con quizzes adaptativos y agente tutor inteligente.",
+      "Siete idiomas, niveles A1–C2, correcciones explicadas en español y exámenes de práctica.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "NeuroEdu IA",
-    description: "Evaluación Cognitiva Inteligente con IA",
+    title: BRAND.name,
+    description: "Aprende idiomas por niveles MCER (A1–C2)",
   },
   robots: {
     index: true,
@@ -64,7 +71,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${inter.variable} h-full antialiased`}>
+    // `suppressHydrationWarning` (React): el script de tema añade una clase a <html> antes de hidratar; es intencional y solo afecta a este nodo
+    <html lang="es" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* [Anti-parpadeo de tema]: script bloqueante mínimo que aplica la clase guardada antes del primer pintado | [Patrón]: Blocking Inline Script | contenido 100% estático (sin datos del usuario) → sin riesgo de XSS */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">
         {/* [Skip-to-content]: enlace accesibilidad teclado | [WCAG 2.4.1] */}
         <a

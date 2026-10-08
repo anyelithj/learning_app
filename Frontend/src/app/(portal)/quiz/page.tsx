@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { listQuizzes } from "@/lib/quiz-api";
+import { listQuizzes, getMySessionsHistory } from "@/lib/quiz-api";
 import { QuizGrid } from "@/components/quiz/QuizGrid";
 
 export const metadata: Metadata = {
@@ -23,12 +23,24 @@ export default async function QuizListPage(props: {
   const sp = await props.searchParams;
 
   let data;
+  // [completedMap]: precisión por quiz ya resuelto por el estudiante → tarjeta marca "Completado" | [Patrón]: Lookup Map
+  let completedMap: Record<string, number> = {};
   try {
-    data = await listQuizzes({
-      page: sp.page ? parseInt(sp.page, 10) : 1,
-      category: sp.category,
-      difficulty: sp.difficulty,
-    });
+    const [quizzes, sessions] = await Promise.all([
+      listQuizzes({
+        page: sp.page ? parseInt(sp.page, 10) : 1,
+        category: sp.category,
+        difficulty: sp.difficulty,
+      }),
+      getMySessionsHistory(100).catch(() => []),
+    ]);
+    data = quizzes;
+    // [Mejor intento por quiz]: conserva la mayor precisión entre sesiones completadas | [Patrón]: Reduce-Max
+    for (const s of sessions) {
+      if (s.status !== "completed") continue;
+      const pct = Math.round(s.accuracy * 100);
+      completedMap[s.quizId] = Math.max(completedMap[s.quizId] ?? 0, pct);
+    }
   } catch (err) {
     return (
       <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-6">
@@ -64,7 +76,7 @@ export default async function QuizListPage(props: {
           </div>
         </div>
       ) : (
-        <QuizGrid quizzes={data.data} />
+        <QuizGrid quizzes={data.data} completedMap={completedMap} />
       )}
 
       {data.total > data.limit && (
@@ -76,8 +88,8 @@ export default async function QuizListPage(props: {
                 href={{ pathname: "/quiz", query: { ...sp, page: String(p) } }}
                 className={
                   p === data.page
-                    ? "px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
-                    : "px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted"
+                    ? "btn btn-primary btn-sm min-w-9"
+                    : "btn btn-outline btn-sm min-w-9"
                 }
               >
                 {p}

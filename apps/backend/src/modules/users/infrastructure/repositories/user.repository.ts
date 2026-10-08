@@ -65,6 +65,9 @@ export class UserRepository implements IUserRepository {
 
     const qb = this.repo.createQueryBuilder('u');
     if (options.role) qb.andWhere('u.role = :role', { role: options.role });
+    if (options.section) {
+      qb.andWhere('u.section = :section', { section: options.section });
+    }
     if (options.search) {
       qb.andWhere(
         '(u.email ILIKE :q OR u.firstName ILIKE :q OR u.lastName ILIKE :q)',
@@ -88,5 +91,16 @@ export class UserRepository implements IUserRepository {
     const result: Record<string, number> = {};
     for (const r of rows) result[r.role] = parseInt(r.count, 10);
     return result;
+  }
+
+  // [listSections]: secciones distintas no nulas, ordenadas | [Patrón]: Distinct Query
+  async listSections(): Promise<string[]> {
+    const rows = await this.repo
+      .createQueryBuilder('u')
+      .select('DISTINCT u.section', 'section')
+      .where('u.section IS NOT NULL')
+      .orderBy('u.section', 'ASC')
+      .getRawMany<{ section: string }>();
+    return rows.map((r) => r.section).filter(Boolean);
   }
 }

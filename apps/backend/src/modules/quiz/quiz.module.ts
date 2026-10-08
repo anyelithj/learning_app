@@ -3,51 +3,54 @@ import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { FeedbackModule } from '../feedback/feedback.module';
 import { Quiz } from './domain/entities/quiz.entity';
 import { Question } from './domain/entities/question.entity';
 import { QuizSession } from './domain/entities/quiz-session.entity';
 import { QUIZ_REPOSITORY } from './domain/interfaces/quiz.repository.interface';
-import { TRIVIA_CLIENT } from './domain/interfaces/trivia-client.interface';
-import { TRANSLATOR } from './domain/interfaces/translator.interface';
 import { QuizRepository } from './infrastructure/repositories/quiz.repository';
-import { OpenTriviaClient } from './infrastructure/clients/open-trivia.client';
-import { OllamaTranslator } from './infrastructure/clients/ollama-translator.client';
 import { CreateQuizUseCase } from './application/use-cases/create-quiz.use-case';
 import { GetQuizUseCase } from './application/use-cases/get-quiz.use-case';
 import { ListQuizzesUseCase } from './application/use-cases/list-quizzes.use-case';
-import { FetchTriviaQuestionsUseCase } from './application/use-cases/fetch-trivia-questions.use-case';
+import { GenerateAIQuestionsUseCase } from './application/use-cases/generate-ai-questions.use-case';
 import { StartSessionUseCase } from './application/use-cases/start-session.use-case';
 import { SubmitAnswerUseCase } from './application/use-cases/submit-answer.use-case';
 import { EndSessionUseCase } from './application/use-cases/end-session.use-case';
+import { ListMyHistoryUseCase } from './application/use-cases/list-my-history.use-case';
 import { QuizController } from './presentation/quiz.controller';
+import { AyaProvider } from './infrastructure/clients/aya.provider';
+import { QwenProvider } from './infrastructure/clients/qwen.provider';
+import { MistralProvider } from './infrastructure/clients/mistral.provider';
+import { AIProviderFactory } from './infrastructure/factories/ai-provider.factory';
 // [Modulo Quiz]: Bounded Context | [Patron]: Module + DI Container | [Principio]: ISP + DIP | [Paradigma]: POO
 
 // [Wire-up Ports → Adapters]: el resto del módulo depende solo del Symbol token | [Patrón]: Service Locator (Nest DI) | [Principio]: DIP
 const quizRepoProvider = { provide: QUIZ_REPOSITORY, useClass: QuizRepository };
-const triviaClientProvider = { provide: TRIVIA_CLIENT, useClass: OpenTriviaClient };
-const translatorProvider = { provide: TRANSLATOR, useClass: OllamaTranslator };
 
 @Module({
   imports: [
-    // [Config disponible para OllamaTranslator]: lee OLLAMA_BASE_URL + OLLAMA_TRANSLATION_MODEL | [Principio]: DRY
     ConfigModule,
     TypeOrmModule.forFeature([Quiz, Question, QuizSession]),
     HttpModule.register({ timeout: 30_000, maxRedirects: 3 }),
-    // [Cache in-memory por default]: Redis se conecta en Sprint 4 via factory
     CacheModule.register({ ttl: 60_000 }),
+    FeedbackModule,
   ],
   controllers: [QuizController],
   providers: [
     quizRepoProvider,
-    triviaClientProvider,
-    translatorProvider,
+    // [AI Providers Ollama]: registrados como clases concretas → factory los resuelve por id | [Patrón]: Registry | [Principio]: OCP
+    AyaProvider,
+    QwenProvider,
+    MistralProvider,
+    AIProviderFactory,
     CreateQuizUseCase,
     GetQuizUseCase,
     ListQuizzesUseCase,
-    FetchTriviaQuestionsUseCase,
+    GenerateAIQuestionsUseCase,
     StartSessionUseCase,
     SubmitAnswerUseCase,
     EndSessionUseCase,
+    ListMyHistoryUseCase,
   ],
   exports: [quizRepoProvider],
 })

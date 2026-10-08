@@ -20,11 +20,16 @@ import { RecItem } from "@/components/portal/RecItem";
 import { listQuizzes, getMyHistory } from "@/lib/quiz-api";
 import { categoryLabel, totalMinutes } from "@/components/portal/quiz-format";
 import { displayNameFromEmail, getCurrentUserPayload } from "@/lib/auth";
+import { AnalyticsFilters } from "@/components/portal/AnalyticsFilters";
+import { parsePeriod } from "@/lib/period";
 import type { ScoreEntry, QuizListItem } from "@/types/quiz";
+import { BRAND } from "@/config/brand";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Dashboard Estudiante",
-  description: "Resumen de actividad en NeuroEdu IA.",
+  description: `Resumen de actividad en ${BRAND.name}.`,
   robots: { index: false, follow: false },
 };
 
@@ -56,19 +61,37 @@ function computeWeeklyBars(history: ScoreEntry[]): Array<{ label: string; height
   return result;
 }
 
-async function loadData() {
+async function loadData(months?: number) {
   const [quizzesRes, historyRes] = await Promise.allSettled([
-    listQuizzes({ limit: 6 }),
-    getMyHistory(20),
+    listQuizzes({ limit: 100 }),
+    getMyHistory(50, months),
   ]);
   const quizzes: QuizListItem[] = quizzesRes.status === "fulfilled" ? quizzesRes.value.data : [];
   const history: ScoreEntry[] = historyRes.status === "fulfilled" ? historyRes.value : [];
   return { quizzes, history, apiOk: quizzesRes.status === "fulfilled" };
 }
 
-export default async function EstudianteDashboardPage() {
-  const { quizzes, history, apiOk } = await loadData();
+export default async function EstudianteDashboardPage(props: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await props.searchParams;
+  const months = parsePeriod(sp.period);
+  const pageRaw = Array.isArray(sp.page) ? sp.page[0] : sp.page;
+  const page = Math.max(1, parseInt(pageRaw ?? "1", 10) || 1);
+  const { quizzes, history, apiOk } = await loadData(months);
   const historyByQuiz = new Map(history.map((h) => [h.quizId, h]));
+
+  // [Paginación "Mis exámenes"]: 5 por página | [Patrón]: Client Paging
+  const QUIZ_PAGE_SIZE = 5;
+  const quizTotalPages = Math.max(1, Math.ceil(quizzes.length / QUIZ_PAGE_SIZE));
+  const quizPage = Math.min(page, quizTotalPages);
+  const pageQuizzes = quizzes.slice((quizPage - 1) * QUIZ_PAGE_SIZE, quizPage * QUIZ_PAGE_SIZE);
+  const quizPageHref = (p: number) => {
+    const q = new URLSearchParams();
+    if (sp.period && !Array.isArray(sp.period)) q.set("period", sp.period);
+    q.set("page", String(p));
+    return `/dashboard/estudiante?${q.toString()}`;
+  };
   const userPayload = await getCurrentUserPayload();
   const displayName = userPayload ? displayNameFromEmail(userPayload.email) : "estudiante";
   const weekBars = computeWeeklyBars(history);
@@ -96,6 +119,12 @@ export default async function EstudianteDashboardPage() {
         searchPlaceholder="Buscar evaluaciones…"
       />
 
+      {/* [Filtro de periodo]: afecta KPIs e historial propio (sin sección: el alumno solo ve sus datos) | [Patrón]: Controlled URL State */}
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-muted-foreground">Periodo:</span>
+        <AnalyticsFilters />
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
         <StatCard label="Exámenes pendientes" value={String(pending)} icon={FileText} />
         <StatCard label="Completados" value={String(completed)} icon={CheckCircle2} />
@@ -121,7 +150,7 @@ export default async function EstudianteDashboardPage() {
             actions={
               <Link
                 href="/quiz"
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-border bg-card hover:border-primary hover:text-primary transition-colors"
+                className="btn btn-outline btn-sm"
               >
                 Ver todos
               </Link>
@@ -138,7 +167,7 @@ export default async function EstudianteDashboardPage() {
               <table className="w-full min-w-[600px] border-collapse">
                 <thead>
                   <tr className="border-b border-border">
-                    {["Examen", "Materia", "Estado", "Puntaje", ""].map((h) => (
+                    {["Examen", "Competencia", "Estado", "Puntaje", ""].map((h) => (
                       <th
                         key={h || "actions"}
                         className="text-left text-[11px] uppercase tracking-wider text-muted-foreground font-semibold px-2.5 py-3"
@@ -149,7 +178,7 @@ export default async function EstudianteDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {quizzes.map((q) => {
+                  {pageQuizzes.map((q) => {
                     const done = historyByQuiz.get(q.id);
                     const minutes = totalMinutes(q.timePerQuestionSeconds, q.questionsCount);
                     return (
@@ -164,14 +193,14 @@ export default async function EstudianteDashboardPage() {
                         <td className="px-2.5 py-3 text-sm">{categoryLabel(q.category)}</td>
                         <td className="px-2.5 py-3 text-sm">
                           {done ? (
-                            <Tag tone="green">Completado</Tag>
+                            <Tag tone="success">Completado</Tag>
                           ) : (
                             <Tag tone="amber">Pendiente</Tag>
                           )}
                         </td>
                         <td className="px-2.5 py-3 text-sm">
                           {done ? (
-                            <b className={done.accuracy >= 0.8 ? "text-emerald-600" : ""}>
+                            <b className={done.accuracy >= 0.8 ? "text-tone-brand" : ""}>
                               {Math.round(done.points)}
                             </b>
                           ) : (
@@ -179,16 +208,23 @@ export default async function EstudianteDashboardPage() {
                           )}
                         </td>
                         <td className="px-2.5 py-3 text-sm">
-                          <Link
-                            href={`/quiz/${q.id}`}
-                            className={
-                              done
-                                ? "text-xs font-semibold px-3 py-1.5 rounded-lg border border-border bg-card hover:border-primary hover:text-primary transition-colors"
-                                : "text-xs font-semibold px-3 py-1.5 rounded-lg bg-gradient-brand text-white shadow-sm hover:-translate-y-0.5 transition-transform inline-block"
-                            }
-                          >
-                            {done ? "Ver feedback" : "Iniciar"}
-                          </Link>
+                          <div className="flex flex-wrap gap-1.5">
+                            {/* [Practicar]: lleva directo a resolver el examen (re-práctica permitida) | [Patrón]: Direct Action */}
+                            <Link
+                              href={`/quiz/${q.id}/play`}
+                              className="btn btn-primary btn-sm"
+                            >
+                              Practicar
+                            </Link>
+                            {done && (
+                              <Link
+                                href={`/quiz/${q.id}`}
+                                className="btn btn-outline btn-sm"
+                              >
+                                Ver feedback
+                              </Link>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -196,6 +232,25 @@ export default async function EstudianteDashboardPage() {
                 </tbody>
               </table>
             </div>
+          )}
+          {/* [Paginación]: 10 exámenes por página | [Patrón]: Pager */}
+          {quizTotalPages > 1 && (
+            <nav className="mt-4 flex items-center justify-center gap-1.5" aria-label="Paginación exámenes">
+              {Array.from({ length: quizTotalPages }, (_, i) => i + 1).map((p) => (
+                <Link
+                  key={p}
+                  href={quizPageHref(p)}
+                  aria-current={p === quizPage ? "page" : undefined}
+                  className={
+                    p === quizPage
+                      ? "btn btn-primary btn-sm min-w-9"
+                      : "btn btn-outline btn-sm min-w-9"
+                  }
+                >
+                  {p}
+                </Link>
+              ))}
+            </nav>
           )}
         </Panel>
 
@@ -236,11 +291,15 @@ export default async function EstudianteDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
         <Panel>
-          <PanelHead title="Progreso cognitivo semanal" />
-          <ChartBars bars={weekBars} />
+          <PanelHead title="Progreso semanal" />
+          <ChartBars
+            bars={weekBars}
+            yLabel="Precisión promedio del día (%)"
+            xLabel="Día de la semana"
+          />
         </Panel>
         <Panel>
-          <PanelHead title="Nivel cognitivo" />
+          <PanelHead title="Nivel MCER" />
           <Donut label={`${avgAccuracy}%`} />
           <div className="flex justify-center gap-4 mt-5 text-xs text-muted-foreground">
             <span>

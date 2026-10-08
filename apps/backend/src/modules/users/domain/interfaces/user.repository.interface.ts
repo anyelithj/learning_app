@@ -12,6 +12,7 @@ export interface CreateUserInput {
   firstName: string;
   lastName: string;
   role?: Role;
+  section?: string | null;
 }
 
 // [Opciones de listado]: filtros y paginación | [Principio]: ISP
@@ -20,6 +21,8 @@ export interface ListUsersOptions {
   limit?: number;
   role?: Role;
   search?: string;
+  // [Filtro por sección]: agrupación escolar | [Principio]: ISP
+  section?: string;
 }
 
 export interface PaginatedUsers {
@@ -47,4 +50,6 @@ export interface IUserRepository {
   listAll(options: ListUsersOptions): Promise<PaginatedUsers>;
   // [Conteos agregados]: usado por reportes admin | [Principio]: SRP
   countByRole(): Promise<Record<string, number>>;
+  // [Secciones existentes]: valores distintos no nulos para poblar filtros | [Principio]: SRP
+  listSections(): Promise<string[]>;
 }

@@ -137,7 +137,7 @@ export function QuizPlayClient({ quiz }: { quiz: Quiz }) {
             type="button"
             onClick={handleSubmit}
             disabled={!selectedAnswer || phase === "submitting"}
-            className="px-6 py-3 rounded-xl bg-gradient-brand text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn btn-primary btn-lg"
           >
             {phase === "submitting" ? "Enviando..." : "Responder"}
           </button>
@@ -145,7 +145,7 @@ export function QuizPlayClient({ quiz }: { quiz: Quiz }) {
           <button
             type="button"
             onClick={handleNext}
-            className="px-6 py-3 rounded-xl bg-gradient-brand text-white font-bold"
+            className="btn btn-primary btn-lg"
           >
             {progress.current >= progress.total ? "Ver resultados" : "Siguiente →"}
           </button>

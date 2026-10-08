@@ -14,6 +14,8 @@ export interface CreateScoreInput {
 
 export interface LeaderboardEntry {
   userId: string;
+  // [Nombre legible]: derivado de users.first_name + last_name vía join | [Principio]: SSOT
+  displayName: string;
   totalPoints: number;
   quizzesCompleted: number;
   avgAccuracy: number;
@@ -21,8 +23,10 @@ export interface LeaderboardEntry {
 
 export interface IScoreRepository {
   create(input: CreateScoreInput): Promise<Score>;
-  findByUser(userId: string, limit?: number): Promise<Score[]>;
-  getLeaderboard(limit?: number): Promise<LeaderboardEntry[]>;
+  // [since]: fecha de corte opcional — solo scores con createdAt >= since | [Patrón]: Time Window
+  findByUser(userId: string, limit?: number, since?: Date): Promise<Score[]>;
+  // [since + section]: ventana temporal y filtro por sección de estudiante (join users) | [Patrón]: Time Window + Scoped Filter
+  getLeaderboard(limit?: number, since?: Date, section?: string): Promise<LeaderboardEntry[]>;
   countByUser(userId: string): Promise<number>;
   sumPointsByUser(userId: string): Promise<number>;
 }

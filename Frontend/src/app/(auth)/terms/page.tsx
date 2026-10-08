@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BRAND } from "@/config/brand";
 // [Página /terms]: contenido estático (Server Component) | [Patrón]: Static Page | [Principio]: SRP | [Paradigma]: RSC + JSX
 
 export const metadata: Metadata = {
   title: "Términos y condiciones",
   description:
-    "Términos de uso y política de privacidad de la plataforma NeuroEdu IA.",
+    `Términos de uso y política de privacidad de la plataforma ${BRAND.name}.`,
   alternates: { canonical: "/terms" },
   robots: { index: true, follow: true },
 };
@@ -25,7 +26,7 @@ export default function TermsPage() {
       <section>
         <h2 className="text-lg font-bold mt-6 mb-2">1. Uso de la plataforma</h2>
         <p className="text-muted-foreground leading-relaxed">
-          NeuroEdu IA es una plataforma académica desarrollada como práctica
+          {BRAND.name} es una plataforma académica desarrollada como práctica
           empresarial universitaria. Los datos almacenados se usan exclusivamente
           para fines educativos y de evaluación.
         </p>
@@ -43,7 +44,7 @@ export default function TermsPage() {
       <section>
         <h2 className="text-lg font-bold mt-6 mb-2">3. Propiedad intelectual</h2>
         <p className="text-muted-foreground leading-relaxed">
-          El contenido pedagógico, código y diseño son propiedad de NeuroEdu IA
+          El contenido pedagógico, código y diseño son propiedad de {BRAND.name}
           o sus licenciantes y están protegidos por las leyes de propiedad
           intelectual aplicables.
         </p>

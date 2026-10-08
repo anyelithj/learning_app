@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createQuiz } from "@/lib/quiz-api";
+import { getFreshAccessToken } from "@/lib/auth";
 import { ApiError } from "@/lib/errors";
 import type { CreateQuizInput } from "@/types/quiz";
 // [Route Handler /api/quiz POST]: Next.js → NestJS proxy para creación de quiz | [Patron]: Proxy + Facade | [Principio]: SRP
@@ -13,6 +14,8 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
+    // [Refresca token antes de mutar]: el form de creación puede haber estado abierto > TTL (15m) → evita 401 | [Patrón]: Token Refresh
+    await getFreshAccessToken();
     const quiz = await createQuiz(body);
     return NextResponse.json(quiz, { status: 201 });
   } catch (err) {

@@ -26,12 +26,14 @@ import { Role } from '../../users/domain/value-objects/role.vo';
 import { CreateQuizUseCase } from '../application/use-cases/create-quiz.use-case';
 import { GetQuizUseCase } from '../application/use-cases/get-quiz.use-case';
 import { ListQuizzesUseCase } from '../application/use-cases/list-quizzes.use-case';
-import { FetchTriviaQuestionsUseCase } from '../application/use-cases/fetch-trivia-questions.use-case';
+import { GenerateAIQuestionsUseCase } from '../application/use-cases/generate-ai-questions.use-case';
 import { StartSessionUseCase } from '../application/use-cases/start-session.use-case';
 import { SubmitAnswerUseCase } from '../application/use-cases/submit-answer.use-case';
 import { EndSessionUseCase } from '../application/use-cases/end-session.use-case';
+import { ListMyHistoryUseCase } from '../application/use-cases/list-my-history.use-case';
 import { CreateQuizDto } from '../application/dtos/create-quiz.dto';
-import { FetchQuestionsDto } from '../application/dtos/fetch-questions.dto';
+import { GenerateAIQuestionsDto } from '../application/dtos/generate-ai-questions.dto';
+import { UpdateQuizDto } from '../application/dtos/update-quiz.dto';
 import { SubmitAnswerDto } from '../application/dtos/submit-answer.dto';
 import { Category } from '../domain/value-objects/category.vo';
 import { Difficulty } from '../domain/value-objects/difficulty.vo';
@@ -45,29 +47,55 @@ export class QuizController {
     private readonly createUC: CreateQuizUseCase,
     private readonly getUC: GetQuizUseCase,
     private readonly listUC: ListQuizzesUseCase,
-    private readonly fetchTriviaUC: FetchTriviaQuestionsUseCase,
+    private readonly generateAIUC: GenerateAIQuestionsUseCase,
     private readonly startUC: StartSessionUseCase,
     private readonly submitUC: SubmitAnswerUseCase,
     private readonly endUC: EndSessionUseCase,
+    private readonly historyUC: ListMyHistoryUseCase,
     @Inject(QUIZ_REPOSITORY) private readonly quizRepo: IQuizRepository,
   ) {}
 
-  // [GET /quiz]: listar publicados con filtros + paginacion
+  // [GET /quiz]: listar quizzes con filtros + paginacion. publishedOnly=false (TEACHER+) muestra borradores | [Patrón]: Query
   @Get()
-  @ApiOperation({ summary: 'List published quizzes' })
+  @ApiOperation({ summary: 'List quizzes (publishedOnly=false requires TEACHER+)' })
   async list(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('category') category?: Category,
     @Query('difficulty') difficulty?: Difficulty,
+    @Query('publishedOnly') publishedOnly?: string,
   ) {
+    // [Parse booleano]: querystring siempre string. 'false' explícito → incluye no-publicados | [Principio]: Robustez
+    const publishedOnlyParsed =
+      publishedOnly === 'false' ? false : publishedOnly === 'true' ? true : undefined;
     return this.listUC.execute({
       page: page ? parseInt(page, 10) : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
       category,
       difficulty,
-      publishedOnly: true,
+      publishedOnly: publishedOnlyParsed,
     });
+  }
+
+  // [GET /quiz/sessions/me]: historial académico del estudiante (puntaje + feedback por pregunta) | [Patrón]: Query | [Principio]: SRP
+  @Get('sessions/me')
+  @ApiOperation({ summary: 'Historial del estudiante autenticado (sesiones + score + feedback por pregunta)' })
+  async myHistory(
+    @CurrentUser() user: JwtPayload,
+    @Query('limit') limit?: string,
+  ) {
+    return this.historyUC.execute(user.sub, limit ? parseInt(limit, 10) : undefined);
+  }
+
+  // [GET /quiz/sessions/by-user/:userId]: docente/admin consulta historial de cualquier estudiante para seguimiento académico | [Patrón]: Query | [Principio]: SRP + Least Privilege
+  @Get('sessions/by-user/:userId')
+  @Roles(Role.TEACHER)
+  @ApiOperation({ summary: 'Historial académico de un estudiante específico (TEACHER+)' })
+  async userHistory(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.historyUC.execute(userId, limit ? parseInt(limit, 10) : undefined);
   }
 
   // [GET /quiz/:id]: detalle con preguntas
@@ -103,22 +131,8 @@ export class QuizController {
   @ApiOperation({ summary: 'Update quiz partial — questions[] reemplaza todo (TEACHER+)' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: Partial<{
-      title: string;
-      description: string;
-      isPublished: boolean;
-      timePerQuestionSeconds: number;
-      category: string;
-      difficulty: string;
-      questions: Array<{
-        text: string;
-        type: string;
-        options?: string[];
-        correctAnswer: string;
-        difficulty: string;
-        timeLimitSeconds?: number;
-      }>;
-    }>,
+    // [DTO validado]: whitelist + forbidNonWhitelisted del ValidationPipe global → sin asignación masiva | [Patrón]: DTO + Validation Pipeline
+    @Body() body: UpdateQuizDto,
   ) {
     const existing = await this.quizRepo.findQuizById(id, false);
     if (!existing) throw new NotFoundException(`Quiz ${id} not found`);
@@ -134,12 +148,14 @@ export class QuizController {
     return this.quizRepo.findQuizById(id, true);
   }
 
-  // [POST /quiz/trivia/fetch]: helper para front al crear quiz
-  @Post('trivia/fetch')
+  // [POST /quiz/ai/generate]: genera preguntas vía LLM local (Qwen/Mistral) con fallback automático | [Patrón]: Facade + Strategy
+  @Post('ai/generate')
   @Roles(Role.TEACHER)
-  @ApiOperation({ summary: 'Fetch trivia questions from OpenTrivia DB (cached)' })
-  async fetchTrivia(@Body() dto: FetchQuestionsDto) {
-    return this.fetchTriviaUC.execute(dto);
+  @ApiOperation({
+    summary: 'Generate questions via local AI (Aya Expanse por defecto). Fallback opcional con AI_FALLBACK_ENABLED.',
+  })
+  async generateAI(@Body() dto: GenerateAIQuestionsDto) {
+    return this.generateAIUC.execute(dto);
   }
 
   // ===== Sessions =====

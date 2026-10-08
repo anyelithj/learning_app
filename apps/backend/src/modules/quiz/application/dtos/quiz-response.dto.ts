@@ -13,6 +13,8 @@ export class QuestionPublicDto {
   @ApiProperty({ enum: Difficulty }) difficulty!: Difficulty;
   @ApiProperty() position!: number;
   @ApiProperty({ required: false }) timeLimitSeconds?: number;
+  @ApiProperty({ required: false }) explanation?: string;
+  @ApiProperty({ required: false }) feedback?: string;
 }
 
 // [Variante con respuesta correcta]: solo para author/admin o tras finalizar sesión
@@ -42,6 +44,8 @@ export class QuizListItemDto {
   @ApiProperty({ enum: Difficulty }) difficulty!: Difficulty;
   @ApiProperty() questionsCount!: number;
   @ApiProperty() timePerQuestionSeconds!: number;
+  // [Estado publicación]: requerido para panel docente (mostrar publicar/despublicar) | [Principio]: ISP
+  @ApiProperty() isPublished!: boolean;
 }
 
 export class PaginatedQuizzesDto {

@@ -1,12 +1,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* [Sistema de diseño NeuroEdu IA]: replica Demohtml/assets/css/style.css | [Patrón]: Design Tokens | [Principio]: SSOT */
+/* [Sistema de diseño de la plataforma]: replica Demohtml/assets/css/style.css | [Patrón]: Design Tokens | [Principio]: SSOT */
 
-@custom-variant dark (&:is(.dark *));
+/* [Variante dark de Tailwind]: los temas oscuros (dark, alto contraste, deep focus, VR) activan las utilidades `dark:` | [Principio]: DRY */
+@custom-variant dark (&:is(.dark *, .hcontrast *, .deepfocus *, .vr *));
 
 @theme inline {
-  /* [Colores marca]: indigo → violet → fuchsia (gradient NeuroEdu) */
+  /* [Colores marca]: indigo → violet → fuchsia (gradiente de marca) */
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-dark: var(--primary-dark);
@@ -33,6 +34,20 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  /* [Tonos semánticos adaptables]: fondo suave / texto / borde por intención (marca, aviso, peligro, info) → sustituyen a los pasteles fijos (bg-purple-100…) que no cambiaban con el tema | [Principio]: SSOT */
+  --color-tone-brand: var(--tone-brand);
+  --color-tone-brand-soft: var(--tone-brand-soft);
+  --color-tone-brand-line: var(--tone-brand-line);
+  --color-tone-warning: var(--tone-warning);
+  --color-tone-warning-soft: var(--tone-warning-soft);
+  --color-tone-warning-line: var(--tone-warning-line);
+  --color-tone-danger: var(--tone-danger);
+  --color-tone-danger-soft: var(--tone-danger-soft);
+  --color-tone-danger-line: var(--tone-danger-line);
+  --color-tone-info: var(--tone-info);
+  --color-tone-info-soft: var(--tone-info-soft);
+  --color-tone-info-line: var(--tone-info-line);
+
   /* [Tipografía]: Inter para body + headings | [Patrón]: Type Scale */
   --font-sans: var(--font-inter), "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-heading: var(--font-inter), system-ui, sans-serif;
@@ -46,7 +61,7 @@
 }
 
 :root {
-  /* [Paleta NeuroEdu]: indigo / violet — hex directos del Demohtml */
+  /* [Paleta de marca]: indigo / violet — hex directos del Demohtml */
   --primary: #6366f1;
   --primary-dark: #4f46e5;
   --primary-light: #818cf8;
@@ -55,45 +70,122 @@
   --secondary-foreground: #ffffff;
   --accent: #06b6d4;
   --accent-foreground: #ffffff;
-  --success: #10b981;
+  --success: #9333ea;
   --warning: #f59e0b;
   --danger: #ef4444;
   --destructive: #ef4444;
 
-  /* [Superficies] */
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
+  /* [Tema Claro — NeuroLearning]: tokens --nl-* por tema (valores exactos de mi-proyecto-neuro) | [Patrón]: Design Tokens + Theming por clase */
+  --nl-bg: #F4F2FF;
+  --nl-surf: #FFFFFF;
+  --nl-surf2: #EEF0FF;
+  --nl-txt: #1E1B4B;
+  --nl-txt2: #5A6180;
+  --nl-brd: rgba(108, 60, 225, 0.18);
+  --nl-shd: 0 2px 20px rgba(0, 123, 255, 0.08);
+
+  /* [Superficies semánticas (shadcn)]: se enlazan UNA vez a los tokens --nl-* → todas las utilidades (bg-card, text-muted-foreground…) siguen al tema | [Principio]: DRY + SSOT
+     La clase del tema vive en <html> (= :root), así que var(--nl-*) se resuelve con los valores del tema activo */
+  --background: var(--nl-bg);
+  --foreground: var(--nl-txt);
+  --card: var(--nl-surf);
+  --card-foreground: var(--nl-txt);
+  --popover: var(--nl-surf);
+  --popover-foreground: var(--nl-txt);
+  --muted: var(--nl-surf2);
+  --muted-foreground: var(--nl-txt2);
+  --border: var(--nl-brd);
+  --input: var(--nl-brd);
   --ring: #6366f1;
 
-  /* [Sombras y gradientes globales]: usables vía CSS o utility classes */
+  /* [Sombras y gradientes globales]: el degradado morado de marca se mantiene igual en TODOS los temas */
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
   --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
   --shadow-lg: 0 12px 32px rgba(99, 102, 241, 0.18);
   --gradient-brand: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
-  --gradient-soft: linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%);
+  /* [Gradiente suave translúcido]: funciona sobre fondos claros y oscuros (antes era sólido claro y deslumbraba en modo oscuro) */
+  --gradient-soft: linear-gradient(135deg, rgba(99, 102, 241, 0.14) 0%, rgba(217, 70, 239, 0.1) 100%);
+  --gradient-soft-global: var(--gradient-soft); /* Alias: la landing redefine --gradient-soft dentro de su raíz */
+
+  /* [Tonos semánticos]: `color-mix()` (CSS Color 5) mezcla el color de intención con la superficie/texto DEL TEMA ACTIVO
+     → en claro salen pasteles con texto oscuro; en oscuro/VR/deep focus, fondos profundos con texto claro. Un solo bloque sirve para los 6 temas | [Principio]: DRY + OCP */
+  --tone-brand: color-mix(in oklab, #7c3aed 70%, var(--nl-txt));
+  --tone-brand-soft: color-mix(in oklab, #8b5cf6 16%, var(--nl-surf));
+  --tone-brand-line: color-mix(in oklab, #8b5cf6 45%, var(--nl-surf));
+  --tone-warning: color-mix(in oklab, #d97706 72%, var(--nl-txt));
+  --tone-warning-soft: color-mix(in oklab, #f59e0b 16%, var(--nl-surf));
+  --tone-warning-line: color-mix(in oklab, #f59e0b 45%, var(--nl-surf));
+  --tone-danger: color-mix(in oklab, #e11d48 72%, var(--nl-txt));
+  --tone-danger-soft: color-mix(in oklab, #f43f5e 14%, var(--nl-surf));
+  --tone-danger-line: color-mix(in oklab, #f43f5e 45%, var(--nl-surf));
+  --tone-info: color-mix(in oklab, #0284c7 72%, var(--nl-txt));
+  --tone-info-soft: color-mix(in oklab, #0ea5e9 14%, var(--nl-surf));
+  --tone-info-line: color-mix(in oklab, #0ea5e9 45%, var(--nl-surf));
 }
 
+/* [Tema Oscuro] */
 .dark {
-  --background: #0f172a;
-  --foreground: #f1f5f9;
-  --card: #1e293b;
-  --card-foreground: #f1f5f9;
-  --popover: #1e293b;
-  --popover-foreground: #f1f5f9;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --border: #334155;
-  --input: #334155;
+  --nl-bg: #0A0A1A;
+  --nl-surf: #1A1A2E;
+  --nl-surf2: #16213E;
+  --nl-txt: #F1F0FF;
+  --nl-txt2: rgba(255, 255, 255, 0.55);
+  --nl-brd: rgba(108, 60, 225, 0.2);
+  --nl-shd: 0 2px 20px rgba(0, 0, 0, 0.45);
   --ring: #818cf8;
 }
+
+/* [Tema Sepia] */
+.sepia {
+  --nl-bg: #F4ECD8;
+  --nl-surf: #EDE0C4;
+  --nl-surf2: #E4D5B4;
+  --nl-txt: #3B2A1A;
+  --nl-txt2: #6B5543;
+  --nl-brd: #C9B89A;
+  --nl-shd: 0 2px 16px rgba(91, 62, 30, 0.12);
+  --ring: #8B5E3C;
+}
+
+/* [Tema Alto Contraste]: borde y foco amarillos para máxima visibilidad | [WCAG 1.4.11] */
+.hcontrast {
+  --nl-bg: #000000;
+  --nl-surf: #111111;
+  --nl-surf2: #1A1A1A;
+  --nl-txt: #FFFFFF;
+  --nl-txt2: #FFFF00;
+  --nl-brd: #FFE000;
+  --nl-shd: 0 2px 16px rgba(255, 224, 0, 0.2);
+  --ring: #FFE000;
+}
+
+/* [Tema Deep Focus] */
+.deepfocus {
+  --nl-bg: #0D1117;
+  --nl-surf: #161B22;
+  --nl-surf2: #1C2333;
+  --nl-txt: #CDD9E5;
+  --nl-txt2: #768390;
+  --nl-brd: #30363D;
+  --nl-shd: 0 2px 20px rgba(0, 0, 0, 0.6);
+  --ring: #58A6FF;
+}
+
+/* [Tema VR Inmersivo] */
+.vr {
+  --nl-bg: #050010;
+  --nl-surf: #0E0520;
+  --nl-surf2: #160A2E;
+  --nl-txt: #E8DFFF;
+  --nl-txt2: #9B8FCC;
+  --nl-brd: #2D1F5E;
+  --nl-shd: 0 2px 20px rgba(108, 60, 225, 0.25);
+  --ring: #BF00FF;
+}
+
+/* [color-scheme]: controles nativos (scrollbar, <select>, date) se pintan oscuros en los temas oscuros */
+.dark, .hcontrast, .deepfocus, .vr { color-scheme: dark; }
+:root, .sepia { color-scheme: light; }
 
 @layer base {
   * {
@@ -106,6 +198,7 @@
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     font-size: 15px;
+    transition: background-color 0.3s, color 0.3s; /* [UX]: cambio de tema suave (igual a NeuroLearning) */
   }
   a {
     color: var(--primary);
@@ -116,7 +209,7 @@
   }
   /* [Focus-visible accesible]: ring index 2, no quita outline en navegación teclado | [WCAG 2.1 AA] */
   *:focus-visible {
-    outline: 2px solid var(--primary);
+    outline: 2px solid var(--ring); /* --ring cambia por tema (amarillo en alto contraste) */
     outline-offset: 2px;
   }
   /* [Reduce motion]: respeta preferencia usuario | [WCAG 2.3.3] */
@@ -128,14 +221,93 @@
   }
 }
 
-@layer utilities {
-  /* [Gradiente marca]: utility para botones y badges */
-  .bg-gradient-brand { background: var(--gradient-brand); }
-  .bg-gradient-soft { background: var(--gradient-soft); }
-  .text-gradient-brand {
+/* ─────────────── Utilidades del sistema de diseño ───────────────
+   `@utility` (Tailwind v4): registra clases propias que admiten variantes (hover:, md:…) y @apply | [Patrón]: Design System (tokens + primitivas) | [Principio]: DRY + SSOT
+   [Regla de uniformidad]: botones y chips = pill (rounded-full); campos de texto/select/buscadores = rounded-lg sobre superficie --nl-surf2 */
+
+/* [Gradiente marca] */
+@utility bg-gradient-brand { background: var(--gradient-brand); }
+@utility bg-gradient-soft { background: var(--gradient-soft); }
+@utility text-gradient-brand {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* [Botón base]: el tamaño va en variables CSS → btn-sm/btn-lg las cambian sin chocar con esta clase (sin depender del orden de utilidades) */
+@utility btn {
+  @apply inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full font-semibold whitespace-nowrap no-underline transition-all select-none;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  @apply disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50;
+  height: var(--btn-h, 2.5rem);
+  padding-inline: var(--btn-px, 1.25rem);
+  font-size: var(--btn-fs, 0.875rem);
+}
+@utility btn-sm { --btn-h: 2rem; --btn-px: 0.875rem; --btn-fs: 0.75rem; }
+@utility btn-lg { --btn-h: 2.75rem; --btn-px: 1.5rem; }
+/* [Variantes de botón]: primaria (degradado morado), contorno, fantasma y peligro */
+@utility btn-primary {
+  background: var(--gradient-brand);
+  @apply text-white shadow-sm hover:-translate-y-px hover:text-white hover:opacity-90;
+}
+@utility btn-outline { @apply border border-border bg-card text-foreground hover:border-primary hover:text-primary; }
+@utility btn-ghost { @apply bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground; }
+@utility btn-danger { @apply bg-destructive text-white hover:text-white hover:opacity-90; }
+
+/* [Campo de formulario]: input, select, textarea y buscadores comparten forma y tono (sin ancho: lo decide quien lo usa) */
+@utility control {
+  @apply min-h-10 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground transition-colors placeholder:text-muted-foreground;
+  @apply focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40;
+  @apply disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-destructive;
+}
+
+/* [Chip de filtro]: pill; activo con aria-pressed="true" o aria-current="page" → degradado de marca (estado accesible = estado visual) */
+@utility chip {
+  @apply inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-transparent px-4 py-1.5 text-xs font-semibold whitespace-nowrap text-muted-foreground no-underline transition-all hover:border-primary hover:text-primary;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  &[aria-pressed="true"], &[aria-current="page"] {
     background: var(--gradient-brand);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
   }
+}
+
+/* [Insignia]: pill pequeña; el color lo ponen los tonos (bg-tone-*-soft text-tone-*) */
+@utility badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap; }
+
+/* [Tarjeta de superficie]: igual a NLCard del original (radio 14, borde y sombra del tema) */
+@utility surface { @apply rounded-[14px] border border-border bg-card shadow-[var(--nl-shd)]; }
+
+/* [Animación de entrada de sección]: igual a NeuroLearning; se anula con prefers-reduced-motion (regla base) */
+@utility fade-in { animation: nl-fade-in 0.3s ease both; }
+/* [Tipografía monoespaciada para cifras]: precios y métricas alineados */
+@utility eeg-mono { font-family: "Roboto Mono", ui-monospace, SFMono-Regular, Consolas, monospace; }
+
+/* [Gráficas Recharts siguen el tema]: ejes, cuadrícula, leyenda y tooltip usan los tokens (antes: blanco/gris fijos que desentonaban en oscuro, sepia o VR) | [Principio]: DRY (una regla para todas las gráficas) */
+.recharts-cartesian-axis-tick-value,
+.recharts-polar-angle-axis-tick-value,
+.recharts-legend-item-text { fill: var(--muted-foreground); color: var(--muted-foreground) !important; }
+.recharts-cartesian-grid line,
+.recharts-cartesian-axis-line,
+.recharts-cartesian-axis-tick-line { stroke: var(--border); }
+.recharts-default-tooltip {
+  background: var(--popover) !important; /* `!important`: Recharts escribe estilos en línea */
+  border: 1px solid var(--border) !important;
+  border-radius: 10px;
+  color: var(--popover-foreground);
+  box-shadow: var(--nl-shd);
+}
+.recharts-tooltip-cursor { fill: var(--muted); }
+
+@keyframes nl-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* [Brazos del avatar]: balanceo sutil del avatar humanoide del perfil */
+@keyframes nl-arm-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(2px); }
 }

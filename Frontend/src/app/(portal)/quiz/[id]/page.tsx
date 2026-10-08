@@ -126,11 +126,23 @@ export default async function QuizDetailPage(props: {
                       </ul>
                     )}
                     <p className="text-xs">
-                      <span className="font-semibold text-emerald-700">Respuesta correcta: </span>
+                      <span className="font-semibold text-tone-brand">Respuesta correcta: </span>
                       <span className="font-mono">
                         {(q as { correctAnswer?: string }).correctAnswer ?? "—"}
                       </span>
                     </p>
+                    {q.explanation && (
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">Explicación: </span>
+                        {q.explanation}
+                      </p>
+                    )}
+                    {q.feedback && (
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">Feedback pedagógico: </span>
+                        {q.feedback}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ol>

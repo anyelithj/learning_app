@@ -13,7 +13,7 @@ export class ListQuizzesUseCase {
     @Inject(QUIZ_REPOSITORY) private readonly repo: IQuizRepository,
   ) {}
 
-  // [execute]: aplica defaults (publishedOnly true para no-autores)
+  // [execute]: aplica defaults; respeta publishedOnly explícito (false → lista incluye no-publicados, p. ej. panel docente) | [Principio]: ISP
   async execute(options: ListQuizzesOptions): Promise<PaginatedQuizzes> {
     return this.repo.listQuizzes({
       page: options.page ?? 1,
@@ -21,7 +21,7 @@ export class ListQuizzesUseCase {
       category: options.category,
       difficulty: options.difficulty,
       authorId: options.authorId,
-      publishedOnly: options.publishedOnly ?? true,
+      publishedOnly: options.publishedOnly === undefined ? true : options.publishedOnly,
     });
   }
 }

@@ -12,6 +12,7 @@ import { Public } from '../../../shared/decorators/public.decorator';
 import { GetLeaderboardUseCase } from '../application/use-cases/get-leaderboard.use-case';
 import { GetUserHistoryUseCase } from '../application/use-cases/get-user-history.use-case';
 import { LeaderboardResponseDto } from '../application/dtos/leaderboard-response.dto';
+import { parsePeriodMonths } from '../../../shared/utils/period.util';
 // [Controller Score]: lecturas de leaderboard + historial | [Patron]: Controller + Facade | [Principio]: SRP
 
 @ApiTags('score')
@@ -27,13 +28,20 @@ export class ScoreController {
   @Public()
   @Get('leaderboard')
   @ApiOperation({ summary: 'Top N users by total points (cached 60s)' })
-  async leaderboard(@Query('limit') limit?: string): Promise<LeaderboardResponseDto> {
+  async leaderboard(
+    @Query('limit') limit?: string,
+    @Query('months') months?: string,
+    @Query('section') section?: string,
+  ): Promise<LeaderboardResponseDto> {
     const data = await this.leaderboardUC.execute(
       limit ? parseInt(limit, 10) : 10,
+      parsePeriodMonths(months),
+      section || undefined,
     );
     const entries = data.map((e, idx) => ({
       rank: idx + 1,
       userId: e.userId,
+      displayName: e.displayName,
       totalPoints: e.totalPoints,
       quizzesCompleted: e.quizzesCompleted,
       avgAccuracy: e.avgAccuracy,
@@ -47,8 +55,13 @@ export class ScoreController {
   async myHistory(
     @CurrentUser() user: JwtPayload,
     @Query('limit') limit?: string,
+    @Query('months') months?: string,
   ) {
-    return this.historyUC.execute(user.sub, limit ? parseInt(limit, 10) : 20);
+    return this.historyUC.execute(
+      user.sub,
+      limit ? parseInt(limit, 10) : 20,
+      parsePeriodMonths(months),
+    );
   }
 
   // [GET /score/history/:userId]: historial de otro usuario (publico hoy)
@@ -57,7 +70,12 @@ export class ScoreController {
   async history(
     @Param('userId', ParseUUIDPipe) userId: string,
     @Query('limit') limit?: string,
+    @Query('months') months?: string,
   ) {
-    return this.historyUC.execute(userId, limit ? parseInt(limit, 10) : 20);
+    return this.historyUC.execute(
+      userId,
+      limit ? parseInt(limit, 10) : 20,
+      parsePeriodMonths(months),
+    );
   }
 }

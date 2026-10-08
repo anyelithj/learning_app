@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { BRAND } from "@/config/brand";
 // [Página /login]: Server Component, monta LoginForm | [Patrón]: Container/Presentational | [Principio]: SRP | [Paradigma]: RSC + JSX
 
 // [Metadata SEO]: específica por página | [Buena práctica]: SEO técnico
 export const metadata: Metadata = {
   title: "Iniciar sesión",
-  description: "Accede a la cuenta NeuroEdu IA para continuar el aprendizaje.",
+  description: `Accede a la cuenta ${BRAND.name} para continuar el aprendizaje.`,
   alternates: { canonical: "/login" },
   robots: { index: true, follow: true },
 };

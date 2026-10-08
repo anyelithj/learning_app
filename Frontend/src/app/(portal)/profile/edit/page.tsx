@@ -1,11 +1,67 @@
-// [Stub Sprint 4]: Profile edit | [Patrón]: Null Object
-export default function ProfileEditPage() {
+import type { Metadata } from "next"; // [Next.js]: tipo de la Metadata API (SEO) | `import type` (TS): se borra al compilar
+import Link from "next/link"; // [Next.js]: navegación cliente con prefetch
+import { redirect } from "next/navigation"; // [Next.js]: redirección server-side (lanza y corta el render)
+import { getMyProfile, type ProfileData } from "@/lib/profile-api"; // [Facade]: GET /profile/me con cookie httpOnly
+import { getServerDictionary } from "@/lib/i18n-server";
+import { toPortalRole } from "@/components/portal/portal-role";
+import { ProfileEditForm } from "./ProfileEditForm"; // [Presentational]: tarjeta de datos personales
+import { AvatarCard } from "./AvatarCard"; // [Presentational]: tarjeta del avatar
+// [Página /profile/edit]: "Mi Perfil" de NeuroLearning — datos personales (izq.) + avatar (der.) | [Patrón]: Container/Presentational | [Principio]: SRP | [Paradigma]: RSC + Server Fetch
+
+// `export const metadata` (Next.js): título/descr. para la pestaña; noindex porque es privada | [SEO]
+export const metadata: Metadata = {
+  title: "Mi perfil",
+  description: "Datos personales y personalización del avatar.",
+  robots: { index: false, follow: false },
+};
+
+// `export const dynamic` (Next.js): render por petición, depende de la sesión del usuario
+export const dynamic = "force-dynamic";
+
+// `export default async function` (React Server Component): corre en el servidor y puede usar await
+export default async function ProfileEditPage() {
+  let profile: ProfileData; // `let` (ES2015): se asigna dentro del try
+  try {
+    profile = await getMyProfile(); // `await` (ES2017): espera la respuesta del backend NestJS
+  } catch {
+    redirect("/login?from=/profile/edit"); // [Fail-safe]: sesión inválida → login y volver aquí
+  }
+  const t = await getServerDictionary();
+  const roleLabel = t.roles[toPortalRole(profile.role)]; // USER/TEACHER/ADMIN → "Estudiante"/"Docente"/…
+
   return (
-    <main className="min-h-screen grid place-items-center p-8">
-      <div className="text-center space-y-3">
-        <h1 className="text-2xl font-extrabold text-gradient-brand">Editar perfil</h1>
-        <p className="text-sm text-muted-foreground">En construcción — Sprint 4.</p>
+    // [Semántica]: <section> (el <main> ya lo pone el layout del portal) | fade-in: animación de entrada del original
+    <section className="fade-in mx-auto w-full max-w-5xl py-4" aria-labelledby="profile-title">
+      <header className="mb-[18px] flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 id="profile-title" className="mb-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
+            {t.profile.title}
+          </h1>
+          <p className="text-xs text-muted-foreground">{t.profile.intro}</p>
+        </div>
+        <Link
+          href="/profile"
+          className="btn btn-outline self-start"
+        >
+          {t.profile.viewProgress}
+        </Link>
+      </header>
+
+      {/* [Responsive]: 1 columna en móvil/tablet, 2 columnas desde lg (igual al original) */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        <ProfileEditForm
+          storageKey={`profile-extras:${profile.id}`} // Clave por usuario: dos cuentas en el mismo navegador no se mezclan
+          firstName={profile.firstName}
+          lastName={profile.lastName}
+          email={profile.email}
+          roleLabel={roleLabel}
+          section={profile.section}
+          isStudent={profile.role === "USER"} // [Regla de negocio]: sección solo aplica a estudiantes
+        />
+        <AvatarCard storageKey={`profile-avatar:${profile.id}`} badge={roleLabel} />
       </div>
-    </main>
+
+      <p className="mt-4 text-xs text-muted-foreground">{t.profile.passwordNote}</p>
+    </section>
   );
 }

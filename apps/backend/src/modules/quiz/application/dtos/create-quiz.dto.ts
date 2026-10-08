@@ -58,6 +58,18 @@ export class QuestionDto {
   @IsInt()
   @Min(5)
   timeLimitSeconds?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  explanation?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  feedback?: string;
 }
 
 export class CreateQuizDto {

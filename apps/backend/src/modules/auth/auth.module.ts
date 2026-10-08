@@ -10,15 +10,19 @@ import { EmailVerificationToken } from './domain/entities/email-verification-tok
 import { PasswordResetToken } from './domain/entities/password-reset-token.entity';
 import { Session } from './domain/entities/session.entity';
 import { AUTH_REPOSITORY } from './domain/interfaces/auth.repository.interface';
+import { EMAIL_VERIFICATION_TOKEN_REPOSITORY } from './domain/interfaces/email-verification-token.repository.interface';
 import { OAUTH_VERIFIER_REGISTRY } from './domain/interfaces/oauth-verifier.interface';
 import { PASSWORD_RESET_TOKEN_REPOSITORY } from './domain/interfaces/password-reset-token.repository.interface';
 import { TOKEN_SERVICE } from './domain/interfaces/token.service.interface';
+import { MAIL_SERVICE } from './domain/interfaces/mail.service.interface';
 import { AuthRepository } from './infrastructure/repositories/auth.repository';
+import { EmailVerificationTokenRepository } from './infrastructure/repositories/email-verification-token.repository';
 import { PasswordResetTokenRepository } from './infrastructure/repositories/password-reset-token.repository';
 import { GoogleOAuthVerifier } from './infrastructure/services/google-oauth.verifier';
 import { JwtTokenService } from './infrastructure/services/jwt-token.service';
 import { MicrosoftOAuthVerifier } from './infrastructure/services/microsoft-oauth.verifier';
 import { OAuthVerifierRegistry } from './infrastructure/services/oauth-verifier.registry';
+import { SmtpMailService } from './infrastructure/services/smtp-mail.service';
 import { JwtStrategy } from './infrastructure/strategies/jwt.strategy';
 import { LocalStrategy } from './infrastructure/strategies/local.strategy';
 import { LoginUseCase } from './application/use-cases/login.use-case';
@@ -27,6 +31,7 @@ import { OAuthLoginUseCase } from './application/use-cases/oauth-login.use-case'
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case';
 import { RegisterUseCase } from './application/use-cases/register.use-case';
 import { RequestPasswordResetUseCase } from './application/use-cases/request-password-reset.use-case';
+import { RequestVerifyEmailUseCase } from './application/use-cases/request-verify-email.use-case';
 import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
 import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-case';
 import { AuthController } from './presentation/auth.controller';
@@ -48,6 +53,14 @@ const passwordResetRepoProvider = {
   provide: PASSWORD_RESET_TOKEN_REPOSITORY,
   useClass: PasswordResetTokenRepository,
 };
+// [Provider EmailVerificationTokenRepository]: expone IEmailVerificationTokenRepository via DI
+const emailVerificationRepoProvider = {
+  provide: EMAIL_VERIFICATION_TOKEN_REPOSITORY,
+  useClass: EmailVerificationTokenRepository,
+};
+
+// [Provider MailService]: expone IMailService (SMTP con nodemailer; log si no hay SMTP_HOST) via DI | [Patrón]: DI Token + Adapter
+const mailServiceProvider = { provide: MAIL_SERVICE, useClass: SmtpMailService };
 
 @Module({
   imports: [
@@ -72,6 +85,8 @@ const passwordResetRepoProvider = {
     authRepoProvider,
     tokenServiceProvider,
     passwordResetRepoProvider,
+    emailVerificationRepoProvider,
+    mailServiceProvider,
     // [Verifiers OAuth]: adapters Google/Microsoft + registry
     GoogleOAuthVerifier,
     MicrosoftOAuthVerifier,
@@ -82,6 +97,7 @@ const passwordResetRepoProvider = {
     RefreshTokenUseCase,
     LogoutUseCase,
     VerifyEmailUseCase,
+    RequestVerifyEmailUseCase,
     OAuthLoginUseCase,
     RequestPasswordResetUseCase,
     ResetPasswordUseCase,

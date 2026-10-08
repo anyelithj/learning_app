@@ -39,6 +39,11 @@ export class User {
   @Column({ type: 'enum', enum: Role, default: Role.USER })
   role!: Role;
 
+  // [Sección/grupo escolar]: agrupa estudiantes (ej. "A", "11-1", "2024-2"). Nullable: no todos los roles la tienen | [Patrón]: Optional Attribute
+  @Index()
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  section?: string | null;
+
   // [Activo]: soft-disable sin borrar (logout forzado, baneo, etc.)
   @Column({ type: 'boolean', default: true, name: 'is_active' })
   isActive!: boolean;

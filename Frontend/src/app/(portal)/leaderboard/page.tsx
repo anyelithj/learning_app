@@ -1,17 +1,27 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getLeaderboard } from "@/lib/quiz-api";
-// [LeaderboardPage]: top global con ISR | [Patron]: Container | [Principio]: SRP | [Paradigma]: RSC + ISR
+import { getCurrentUserRole } from "@/lib/auth";
+import { Role } from "@/lib/constants";
+import { BRAND } from "@/config/brand";
+// [LeaderboardPage]: ranking — exclusivo docente/admin (datos personales de estudiantes) | [Patron]: Container | [Principio]: SRP + Least Privilege | [Paradigma]: RSC
 
 export const metadata: Metadata = {
   title: "Leaderboard",
-  description: "Ranking global de NeuroEdu IA.",
+  description: `Ranking global de ${BRAND.name}.`,
   robots: { index: false, follow: false },
 };
 
-// [ISR revalidate 60s]: spec define revalidate: 60 para leaderboard
-export const revalidate = 60;
+// [Dynamic]: depende del rol del usuario; no se puede cachear con ISR | [Patrón]: Per-request Auth
+export const dynamic = "force-dynamic";
 
 export default async function LeaderboardPage() {
+  // [Guard de rol]: el ranking expone nombres/puntajes de estudiantes; solo docente/admin | [Principio]: Least Privilege
+  const role = await getCurrentUserRole();
+  if (role !== Role.TEACHER && role !== Role.ADMIN) {
+    notFound();
+  }
+
   let entries;
   try {
     const data = await getLeaderboard(20);
@@ -54,8 +64,8 @@ export default async function LeaderboardPage() {
                 <td className="px-4 py-3 font-bold">
                   {e.rank === 1 ? "🥇" : e.rank === 2 ? "🥈" : e.rank === 3 ? "🥉" : `#${e.rank}`}
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                  {e.userId.slice(0, 8)}...
+                <td className="px-4 py-3 text-sm font-medium">
+                  {e.displayName || `Usuario ${e.userId.slice(0, 6)}`}
                 </td>
                 <td className="px-4 py-3 text-right font-bold tabular-nums">
                   {Math.round(e.totalPoints)}

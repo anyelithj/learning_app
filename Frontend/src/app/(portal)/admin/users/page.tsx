@@ -4,12 +4,11 @@ import { listUsers, listQuizzes, type AdminUser } from "@/lib/quiz-api";
 import type { PaginatedQuizzes } from "@/types/quiz";
 import { DeactivateUserButton } from "@/components/admin/DeactivateUserButton";
 import { QuizAdminTable } from "@/components/quiz/QuizAdminTable";
-import { QuizSeedButton } from "@/components/quiz/QuizSeedButton";
-import { cn } from "@/lib/utils";
+import { ManagementHeader } from "@/components/portal/ManagementHeader";
 
 export const metadata: Metadata = {
-  title: "Gestión · NeuroEdu IA",
-  description: "Panel de gestión de usuarios y exámenes (ADMIN).",
+  title: "Gestión",
+  description: "Panel de gestión de usuarios, exámenes, cursos y contenido (ADMIN).",
   robots: { index: false, follow: false },
 };
 
@@ -33,9 +32,9 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 const ROLE_COLOR: Record<string, string> = {
-  USER: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200",
-  TEACHER: "bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-200",
-  ADMIN: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
+  USER: "bg-tone-brand-soft text-tone-brand",
+  TEACHER: "bg-tone-info-soft text-tone-info",
+  ADMIN: "bg-tone-warning-soft text-tone-warning",
 };
 
 function buildQuery(sp: SearchParams, overrides: Record<string, string>): string {
@@ -51,49 +50,13 @@ export default async function AdminPanelPage(props: { searchParams: Promise<Sear
   const tab: Tab = sp.tab === "examenes" ? "examenes" : "usuarios";
 
   return (
-    <main className="container mx-auto max-w-6xl px-4 py-8 space-y-6">
-      <header>
-        <h1 className="text-3xl font-extrabold tracking-tight">Gestión</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Administra usuarios y exámenes desde un único panel.
-        </p>
-      </header>
-
-      <nav className="flex gap-1 border-b border-border" aria-label="Pestañas de gestión">
-        <TabPill href="/admin/users?tab=usuarios" active={tab === "usuarios"}>
-          Usuarios
-        </TabPill>
-        <TabPill href="/admin/users?tab=examenes" active={tab === "examenes"}>
-          Exámenes
-        </TabPill>
-      </nav>
+    // [Semántica]: <div> y no <main> → el layout del portal ya aporta el único <main> de la página
+    <div className="container mx-auto max-w-6xl py-4 space-y-6">
+      {/* [Cabecera + pestañas comunes de Gestión]: Usuarios · Exámenes · Cursos · Contenido | [Principio]: DRY */}
+      <ManagementHeader role="admin" active={tab === "usuarios" ? "users" : "exams"} />
 
       {tab === "usuarios" ? <UsersTab sp={sp} /> : <ExamsTab sp={sp} />}
-    </main>
-  );
-}
-
-function TabPill({
-  href,
-  active,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "px-4 py-2 -mb-px text-sm font-semibold border-b-2 transition-colors",
-        active
-          ? "border-primary text-primary"
-          : "border-transparent text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {children}
-    </Link>
+    </div>
   );
 }
 
@@ -103,13 +66,13 @@ async function UsersTab({ sp }: { sp: SearchParams }) {
   try {
     data = await listUsers({
       page: sp.page ? parseInt(sp.page, 10) : 1,
-      limit: 20,
+      limit: 10,
       role: sp.role,
       search: sp.search,
     });
   } catch (err) {
     error = err instanceof Error ? err.message : "Error cargando usuarios";
-    data = { data: [], total: 0, page: 1, limit: 20 };
+    data = { data: [], total: 0, page: 1, limit: 10 };
   }
 
   return (
@@ -121,7 +84,7 @@ async function UsersTab({ sp }: { sp: SearchParams }) {
         </p>
         <Link
           href="/admin/users/new"
-          className="h-10 inline-flex items-center px-4 rounded-lg bg-gradient-brand text-white font-semibold text-sm hover:opacity-90"
+          className="btn btn-primary"
         >
           + Crear usuario
         </Link>
@@ -139,7 +102,7 @@ async function UsersTab({ sp }: { sp: SearchParams }) {
             type="search"
             defaultValue={sp.search ?? ""}
             placeholder="Nombre o email"
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            className="control"
           />
         </div>
         <div>
@@ -150,7 +113,7 @@ async function UsersTab({ sp }: { sp: SearchParams }) {
             id="role"
             name="role"
             defaultValue={sp.role ?? ""}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            className="control"
           >
             <option value="">Todos</option>
             <option value="USER">Estudiante</option>
@@ -160,7 +123,7 @@ async function UsersTab({ sp }: { sp: SearchParams }) {
         </div>
         <button
           type="submit"
-          className="h-10 px-4 rounded-md bg-gradient-brand text-white font-semibold text-sm"
+          className="btn btn-primary"
         >
           Filtrar
         </button>
@@ -212,7 +175,7 @@ async function UsersTab({ sp }: { sp: SearchParams }) {
                   </td>
                   <td className="py-2 px-4">
                     {u.isActive ? (
-                      <span className="text-emerald-600">Activo</span>
+                      <span className="text-tone-brand">Activo</span>
                     ) : (
                       <span className="text-muted-foreground">Inactivo</span>
                     )}
@@ -226,9 +189,12 @@ async function UsersTab({ sp }: { sp: SearchParams }) {
                   </td>
                   <td className="py-2 px-4">
                     <div className="flex flex-wrap items-center gap-2">
+                      <Link href={`/admin/users/${u.id}`} className="btn btn-outline btn-sm" aria-label={`Ver ${u.firstName} ${u.lastName}`}>
+                        Ver
+                      </Link>
                       <Link
                         href={`/admin/users/${u.id}/edit`}
-                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-border bg-card hover:border-primary hover:text-primary transition-colors"
+                        className="btn btn-outline btn-sm"
                       >
                         Editar
                       </Link>
@@ -254,8 +220,8 @@ async function UsersTab({ sp }: { sp: SearchParams }) {
               href={`/admin/users?${buildQuery(sp, { tab: "usuarios", page: String(p) })}`}
               className={
                 p === data.page
-                  ? "px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
-                  : "px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted"
+                  ? "btn btn-primary btn-sm min-w-9"
+                  : "btn btn-outline btn-sm min-w-9"
               }
             >
               {p}
@@ -273,12 +239,13 @@ async function ExamsTab({ sp }: { sp: SearchParams }) {
   try {
     data = await listQuizzes({
       page: sp.page ? parseInt(sp.page, 10) : 1,
+      limit: 10,
       category: sp.category,
       difficulty: sp.difficulty,
     });
   } catch (err) {
     error = err instanceof Error ? err.message : "Error cargando exámenes";
-    data = { data: [], total: 0, page: 1, limit: 12 };
+    data = { data: [], total: 0, page: 1, limit: 10 };
   }
 
   return (
@@ -290,11 +257,10 @@ async function ExamsTab({ sp }: { sp: SearchParams }) {
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/quiz/create"
-            className="inline-flex items-center h-10 px-4 rounded-lg bg-gradient-brand text-white font-semibold text-sm hover:opacity-90"
+            className="btn btn-primary"
           >
             + Crear examen
           </Link>
-          <QuizSeedButton label="🌐 Generar examen" />
         </div>
       </div>
 
@@ -317,8 +283,8 @@ async function ExamsTab({ sp }: { sp: SearchParams }) {
               href={`/admin/users?${buildQuery(sp, { tab: "examenes", page: String(p) })}`}
               className={
                 p === data.page
-                  ? "px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
-                  : "px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted"
+                  ? "btn btn-primary btn-sm min-w-9"
+                  : "btn btn-outline btn-sm min-w-9"
               }
             >
               {p}

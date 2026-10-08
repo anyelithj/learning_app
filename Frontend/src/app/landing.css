@@ -1,22 +1,23 @@
-/* NeuroEdu IA — Landing design system (mirrored from Demohtml/assets/css/style.css) */
+/* Landing design system (mirrored from Demohtml/assets/css/style.css) */
 .landing-root {
   --primary: #6366f1;
   --primary-dark: #4f46e5;
   --primary-light: #818cf8;
   --secondary: #8b5cf6;
   --accent: #06b6d4;
-  --success: #10b981;
+  --success: #9333ea;
   --warning: #f59e0b;
   --danger: #ef4444;
-  --bg: #f8fafc;
-  --bg-alt: #f1f5f9;
-  --surface: #ffffff;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --text-muted: #64748b;
+  /* [Tema activo]: la landing usa los mismos tokens --nl-* que el portal → cambia con los 6 temas | [Principio]: SSOT */
+  --bg: var(--nl-bg);
+  --bg-alt: var(--nl-surf2);
+  --surface: var(--nl-surf);
+  --border: var(--nl-brd);
+  --text: var(--nl-txt);
+  --text-muted: var(--nl-txt2);
   --text-light: #94a3b8;
   --gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
-  --gradient-soft: linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%);
+  --gradient-soft: var(--gradient-soft-global);
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
   --shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
   --shadow-lg: 0 12px 32px rgba(99, 102, 241, 0.18);
@@ -36,7 +37,8 @@
 .landing-root a { color: var(--primary); text-decoration: none; }
 .landing-root a:hover { color: var(--primary-dark); }
 .landing-root img { max-width: 100%; display: block; }
-.landing-root button { font-family: inherit; cursor: pointer; border: none; background: none; }
+/* [Reset de botones de la landing]: excluye los menús de tema/idioma (aria-haspopup) y sus opciones (role) para no borrar su estilo */
+.landing-root button:not([aria-haspopup]):not([role]) { font-family: inherit; cursor: pointer; border: none; background: none; }
 
 .landing-root .container { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
 
@@ -62,7 +64,7 @@
 
 .landing-root .navbar {
   position: sticky; top: 0; z-index: 50;
-  background: rgba(255,255,255,0.85);
+  background: color-mix(in srgb, var(--nl-surf) 85%, transparent); /* `color-mix` (CSS Color 5): superficie del tema translúcida */
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
@@ -118,7 +120,9 @@
   width: 100%; height: 100%; filter: drop-shadow(0 20px 40px rgba(99,102,241,0.3));
 }
 .landing-root .floating-card {
-  position: absolute; background: #fff; padding: 14px 18px;
+  /* [Tema]: superficie + texto del tema activo (antes #fff fijo → texto claro invisible en oscuro) */
+  position: absolute; background: var(--surface); color: var(--text); padding: 14px 18px;
+  border: 1px solid var(--border);
   border-radius: 14px; box-shadow: var(--shadow-lg);
   display: flex; align-items: center; gap: 12px;
   font-size: 13px;
@@ -199,7 +203,8 @@
 .landing-root .cta-section .btn-primary:hover { background: var(--bg); color: var(--primary-dark); }
 
 .landing-root .footer {
-  background: var(--text); color: #cbd5e1;
+  /* [Footer siempre oscuro]: fondo fijo; antes var(--text) se volvía claro en tema oscuro → texto claro ilegible */
+  background: #0f172a; color: #cbd5e1;
   padding: 60px 0 30px;
 }
 .landing-root .footer-grid {
@@ -209,6 +214,8 @@
 .landing-root .footer h4 { color: #fff; margin-bottom: 16px; font-size: 14px; }
 .landing-root .footer a { color: #cbd5e1; display: block; padding: 4px 0; font-size: 14px; }
 .landing-root .footer a:hover { color: #fff; }
+/* [Contacto como texto]: los enlaces mailto no son fiables en todos los entornos | [UX] */
+.landing-root .footer-grid > div > span { color: #cbd5e1; display: block; padding: 4px 0; font-size: 14px; }
 .landing-root .footer-bottom {
   border-top: 1px solid #1e293b; padding-top: 24px;
   text-align: center; font-size: 13px; color: #64748b;

@@ -7,6 +7,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { Public } from '../../../shared/decorators/public.decorator';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
@@ -15,6 +16,7 @@ import { OAuthLoginUseCase } from '../application/use-cases/oauth-login.use-case
 import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.use-case';
 import { RegisterUseCase } from '../application/use-cases/register.use-case';
 import { RequestPasswordResetUseCase } from '../application/use-cases/request-password-reset.use-case';
+import { RequestVerifyEmailUseCase } from '../application/use-cases/request-verify-email.use-case';
 import { ResetPasswordUseCase } from '../application/use-cases/reset-password.use-case';
 import { VerifyEmailUseCase } from '../application/use-cases/verify-email.use-case';
 import { LoginDto } from '../application/dtos/login.dto';
@@ -22,6 +24,7 @@ import { OAuthLoginDto } from '../application/dtos/oauth-login.dto';
 import { RegisterDto } from '../application/dtos/register.dto';
 import { RefreshTokenDto } from '../application/dtos/refresh.dto';
 import { ForgotPasswordDto } from '../application/dtos/forgot-password.dto';
+import { RequestVerifyEmailDto } from '../application/dtos/request-verify-email.dto';
 import { ResetPasswordDto } from '../application/dtos/reset-password.dto';
 import { AuthResponseDto } from '../application/dtos/auth-response.dto';
 // [Controller Auth]: capa Presentation, traduce HTTP → Use Case | [Patrón]: Controller (MVC) + Facade | [Principio]: SRP | [Paradigma]: POO
@@ -36,6 +39,7 @@ export class AuthController {
     private readonly refreshUC: RefreshTokenUseCase,
     private readonly logoutUC: LogoutUseCase,
     private readonly verifyEmailUC: VerifyEmailUseCase,
+    private readonly requestVerifyEmailUC: RequestVerifyEmailUseCase,
     private readonly oauthUC: OAuthLoginUseCase,
     private readonly requestResetUC: RequestPasswordResetUseCase,
     private readonly resetPasswordUC: ResetPasswordUseCase,
@@ -109,9 +113,20 @@ export class AuthController {
     return this.logoutUC.execute(dto?.refreshToken);
   }
 
-  // [POST /auth/verify-email/:token]: público (Sprint posterior real)
+  // [POST /auth/request-verify-email]: público — siempre 200 (no filtra existencia de email)
   @Public()
-  @Post('verify-email/:token')
+  @Post('request-verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Send a verification email with token' })
+  async requestVerifyEmail(
+    @Body() dto: RequestVerifyEmailDto,
+  ): Promise<{ success: true }> {
+    return this.requestVerifyEmailUC.execute(dto);
+  }
+
+  // [POST /auth/verify-email]: público — valida token y marca email como verificado
+  @Public()
+  @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify a user email via token' })
   async verifyEmail(@Body('token') token: string) {
@@ -121,6 +136,8 @@ export class AuthController {
   // [POST /auth/forgot-password]: público — siempre 200 (no filtra existencia de email)
   @Public()
   @Post('forgot-password')
+  // `@Throttle` (@nestjs/throttler): máx. 5 solicitudes/min por IP → evita spam de correos y enumeración | [Seguridad]
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request a password reset email' })
   async forgotPassword(

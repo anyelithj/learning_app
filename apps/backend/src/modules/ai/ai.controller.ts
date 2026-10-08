@@ -2,6 +2,7 @@ import { Body, Controller, Headers, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import type { JwtPayload } from '../../shared/decorators/current-user.decorator';
+import type { Language } from '../quiz/domain/value-objects/language.vo';
 import {
   AIClientService,
   type FeedbackResult,
@@ -22,7 +23,8 @@ export interface GenerateFeedbackBody {
   correctAnswer: string;
   userAnswer: string;
   topic?: string;
-  language?: 'es' | 'en';
+  // [ISO 639-1]: idioma del contenido evaluado (grade) o de instrucción (feedback)
+  language?: Language;
 }
 
 @ApiTags('ai')
